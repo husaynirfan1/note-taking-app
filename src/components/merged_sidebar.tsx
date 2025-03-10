@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef, MouseEvent as ReactMouseEvent, DragEvent } from "react";
+import { useEffect, useState, useRef, useCallback, MouseEvent as ReactMouseEvent, DragEvent } from "react";
 import { listDriveFolders, listDriveFiles, deleteFile } from "@/lib/googleDrive";
 import { getAuth } from "firebase/auth";
 import { uploadFileToDrive, createDriveFolder } from "@/lib/googleDrive";
@@ -20,6 +20,8 @@ export default function MergedSidebarUpload({ onFileSelect, onToggleBrainView }:
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [progressMessages, setProgressMessages] = useState<{ [key: string]: number }>({});
   const [processingFiles, setProcessingFiles] = useState(new Set<string>());
+  // Add a state to track completed summarizations
+  const [completedSummarizations, setCompletedSummarizations] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [activeDragFolderId, setActiveDragFolderId] = useState<string | null>(null);
   const [deletingFiles, setDeletingFiles] = useState(new Set<string>());
@@ -42,21 +44,43 @@ export default function MergedSidebarUpload({ onFileSelect, onToggleBrainView }:
 
     fetchFolders();
   }, [accessToken]);
-
+  
+  // Add effect to refresh file list when a summarization completes
   useEffect(() => {
+    if (completedSummarizations.length > 0 && expandedFolderId && accessToken) {
+      console.log("Refreshing files due to completed summarization in sidebar");
+      listDriveFiles(accessToken, expandedFolderId).then(files => {
+        setFolderFiles(files);
+        console.log("Successfully refreshed files in sidebar after summarization");
+      }).catch(error => {
+        console.error("Error refreshing files in sidebar:", error);
+      });
+    }
+  }, [completedSummarizations, expandedFolderId, accessToken]);
+
+  // Create a ref for the WebSocket connection
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // Function to establish WebSocket connection
+  const connectWebSocket = useCallback(() => {
+    console.log("Connecting to WebSocket in sidebar...");
+    
+    // Close existing connection if any
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.close();
+    }
+    
     // Create a WebSocket connection for real-time progress updates
     const ws = new WebSocket("ws://140.245.111.121:8051/progress");
-    
-    // Store WebSocket reference to ensure it's accessible throughout the component
-    const wsRef = useRef(ws);
+    wsRef.current = ws;
     
     // Handle connection opening
-    wsRef.current.onopen = () => {
-      console.log("WebSocket connection established");
+    ws.onopen = () => {
+      console.log("WebSocket connection established in sidebar");
     };
     
     // Handle incoming messages
-    wsRef.current.onmessage = (event) => {
+    ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         const { fileId, progress, message } = data;
@@ -75,12 +99,23 @@ export default function MergedSidebarUpload({ onFileSelect, onToggleBrainView }:
           setProcessingFiles((prev) => {
             const newSet = new Set(prev);
             newSet.delete(fileId); // Remove from processing set
+            console.log(`Removing file ${fileId} from processing set in sidebar, new set size: ${newSet.size}`);
             return newSet;
           });
           
           // Show completion message
           if (progress === 100) {
             setMessage(`Processing complete: ${fileId}`);
+            setCompletedSummarizations(prev => [...prev, fileId]);
+            
+            // Refresh the file list if a folder is expanded
+            if (expandedFolderId && accessToken) {
+              console.log(`Refreshing files in folder ${expandedFolderId} after summarization`);
+              listDriveFiles(accessToken, expandedFolderId).then(files => {
+                setFolderFiles(files);
+                console.log("Refreshed file list in sidebar after summarization completed");
+              });
+            }
           } else if (progress === -1) {
             setMessage(`Processing failed: ${fileId}`);
           }
@@ -104,19 +139,55 @@ export default function MergedSidebarUpload({ onFileSelect, onToggleBrainView }:
           console.log("Attempting to reconnect WebSocket...");
           const newWs = new WebSocket("ws://140.245.111.121:8051/progress");
           wsRef.current = newWs;
-          // Re-attach event handlers
-          setupWebSocketHandlers(newWs);
+          // Set up event handlers directly
+          newWs.onopen = () => {
+            console.log("WebSocket connection re-established in sidebar");
+          };
+          
+          newWs.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+              const { fileId, progress, message } = data;
+              
+              console.log(`Progress Update in sidebar: ${fileId} - ${progress}%`);
+              
+              // Update progress messages
+              setProgressMessages((prev) => {
+                const newState = { ...prev, [fileId]: progress };
+                return newState;
+              });
+              
+              // Handle completion
+              if ([100, -1].includes(progress)) {
+                setProcessingFiles((prev) => {
+                  const newSet = new Set(prev);
+                  newSet.delete(fileId);
+                  console.log(`Removing file ${fileId} from processing set in sidebar, new set size: ${newSet.size}`);
+                  return newSet;
+                });
+                
+                if (progress === 100) {
+                  setCompletedSummarizations(prev => [...prev, fileId]);
+                }
+              }
+            } catch (error) {
+              console.error("Error parsing WebSocket message in sidebar:", error);
+            }
+          };
+          
+          newWs.onerror = (error) => {
+            console.error("WebSocket error in sidebar:", error);
+          };
+          
+          newWs.onclose = (event) => {
+            console.log("WebSocket connection closed in sidebar:", event.code, event.reason);
+          };
         }
       }, 3000);
     };
     
-    // Helper function to setup WebSocket handlers
-    const setupWebSocketHandlers = (ws: WebSocket) => {
-      ws.onopen = wsRef.current.onopen;
-      ws.onmessage = wsRef.current.onmessage;
-      ws.onerror = wsRef.current.onerror;
-      ws.onclose = wsRef.current.onclose;
-    };
+    // This function is no longer needed as we're setting up handlers directly
+    // on the WebSocket instance
     
     // Clean up WebSocket connection when component unmounts
     return () => {
@@ -124,7 +195,20 @@ export default function MergedSidebarUpload({ onFileSelect, onToggleBrainView }:
         wsRef.current.close();
       }
     };
-  }, [accessToken]);
+  }, []);
+  
+  // Establish WebSocket connection when component mounts
+  useEffect(() => {
+    console.log("Establishing WebSocket connection in sidebar...");
+    connectWebSocket();
+    
+    // Clean up WebSocket connection when component unmounts
+    return () => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.close();
+      }
+    };
+  }, [connectWebSocket]);
   
   
   

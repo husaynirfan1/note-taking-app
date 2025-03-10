@@ -142,6 +142,12 @@ function MergedSidebarUpload({ onFileSelect, onToggleBrainView, updateBrainData 
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [progressMessages, setProgressMessages] = useState<{ [key: string]: number }>({});
+  // Add a state to force re-renders when summarization completes
+  const [completedSummarizations, setCompletedSummarizations] = useState<string[]>([]);
+  // Add a counter to force re-renders
+  const [updateCounter, setUpdateCounter] = useState(0);
+  // Add a state to directly track summarized files
+  const [summarizedFiles, setSummarizedFiles] = useState<{[key: string]: boolean}>({});
   const [processingFiles, setProcessingFiles] = useState(new Set<string>());
   const [isDragging, setIsDragging] = useState(false);
   const [activeDragFolderId, setActiveDragFolderId] = useState<string | null>(null);
@@ -169,15 +175,61 @@ function MergedSidebarUpload({ onFileSelect, onToggleBrainView, updateBrainData 
   // Create a ref for the WebSocket connection
   const wsRef = useRef<WebSocket | null>(null);
   
+  // Add effect to force UI updates when processing state changes
+  useEffect(() => {
+    console.log("Processing files state changed:", [...processingFiles]);
+    // Force a re-render when processing files change
+    setUpdateCounter(prev => prev + 1);
+  }, [processingFiles]);
+
+  // Add effect to force UI updates when progress messages change
+  useEffect(() => {
+    console.log("Progress messages changed:", progressMessages);
+    // Force a re-render when progress messages change
+    setUpdateCounter(prev => prev + 1);
+    
+    // Check for any files that have completed (progress = 100) and make sure they're in summarizedFiles
+    Object.entries(progressMessages).forEach(([fileId, progress]) => {
+      if (progress === 100) {
+        setSummarizedFiles(prev => {
+          if (!prev[fileId]) {
+            console.log(`Adding file ${fileId} to summarizedFiles from progress messages effect`);
+            return {...prev, [fileId]: true};
+          }
+          return prev;
+        });
+      }
+    });
+  }, [progressMessages]);
+  
+  // Add effect to force UI updates when completed summarizations change
+  useEffect(() => {
+    console.log("Completed summarizations changed:", completedSummarizations);
+    // Force a re-render when completed summarizations change
+    setUpdateCounter(prev => prev + 1);
+    
+    // Debug: Log all button states after completedSummarizations changes
+    if (folderFiles.length > 0) {
+      console.log("Current folder files:", folderFiles.map(f => f.id));
+      folderFiles.forEach(file => {
+        const isProcessing = processingFiles.has(file.id);
+        const progress = progressMessages[file.id];
+        const isCompleted = completedSummarizations.includes(file.id);
+        console.log(`EFFECT: Button state for ${file.id}: processing=${isProcessing}, progress=${progress}, completed=${isCompleted}`);
+      });
+    }
+  }, [completedSummarizations, folderFiles, processingFiles, progressMessages]);
+
   // Function to establish WebSocket connection
   const connectWebSocket = useCallback(() => {
+    console.log("Connecting to WebSocket...");
     // Close existing connection if any
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.close();
     }
     
     // Create a new WebSocket connection
-    const ws = new WebSocket("ws://114.32.64.6:40955/progress");
+    const ws = new WebSocket("ws://140.245.111.121:8051/progress");
     wsRef.current = ws;
     
     // Handle connection opening
@@ -207,25 +259,66 @@ function MergedSidebarUpload({ onFileSelect, onToggleBrainView, updateBrainData 
           setProcessingFiles((prev) => {
             const newSet = new Set(prev);
             newSet.delete(fileId);
+            console.log(`Removing file ${fileId} from processing set, new set size: ${newSet.size}`);
             return newSet;
           });
           
           // Show appropriate message
           if (progress === 100) {
             setMessage(`Summarization complete for file: ${fileId}`);
+            // Add to completed summarizations to trigger UI updates
+            setCompletedSummarizations(prev => {
+              console.log(`Adding ${fileId} to completedSummarizations. Current: [${prev.join(', ')}]`);
+              return [...prev, fileId];
+            });
+            // Directly mark this file as summarized in the summarizedFiles state
+            setSummarizedFiles(prev => {
+              const newState = {...prev, [fileId]: true};
+              console.log(`Marking file ${fileId} as summarized directly in summarizedFiles state:`, newState);
+              return newState;
+            });
+            
+            // Explicitly update progress messages to ensure UI updates
+            setProgressMessages(prev => {
+              // Make sure we set progress to 100 for this file
+              const newState = {...prev, [fileId]: 100};
+              console.log(`Explicitly setting progress to 100 for file ${fileId} in progressMessages:`, newState);
+              return newState;
+            });
+            
+            // Increment update counter to force re-render
+            setUpdateCounter(prev => prev + 1);
+            
+            // Refresh the file list in the current folder if expanded
+            if (expandedFolderId) {
+              const accessToken = localStorage.getItem("accessToken");
+              if (accessToken) {
+                listDriveFiles(accessToken, expandedFolderId).then(files => {
+                  setFolderFiles(files);
+                  console.log("Refreshed file list after summarization completed");
+                });
+              }
+            }
           } else if (progress === -1) {
             setMessage(`Summarization failed for file: ${fileId} - ${progressMessage || 'Unknown error'}`);
           }
         }
         
-        // Then update progress messages after a small delay to ensure state updates are applied in order
-        setTimeout(() => {
-          setProgressMessages((prev) => {
-            const newState = { ...prev, [fileId]: progress };
-            console.log("New progress state:", newState);
-            return newState;
-          });
-        }, 50);
+        // Update progress messages immediately to ensure UI updates correctly
+        setProgressMessages((prev) => {
+          const newState = { ...prev, [fileId]: progress };
+          console.log("New progress state:", newState);
+          
+          // If progress is 100, also update summarizedFiles directly
+          if (progress === 100) {
+            setSummarizedFiles(prevSummarized => ({
+              ...prevSummarized,
+              [fileId]: true
+            }));
+          }
+          
+          return newState;
+        });
       } catch (error) {
         console.error("Error processing WebSocket message:", error, event.data);
       }
@@ -272,6 +365,19 @@ function MergedSidebarUpload({ onFileSelect, onToggleBrainView, updateBrainData 
     // This effect will run when folders, expandedFolderId, or folderFiles change
     // We don't need to do anything here as the state is already updated
   }, [folders, expandedFolderId, folderFiles]);
+  
+  // Establish WebSocket connection when component mounts
+  useEffect(() => {
+    console.log("Establishing WebSocket connection...");
+    connectWebSocket();
+    
+    // Clean up WebSocket connection when component unmounts
+    return () => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.close();
+      }
+    };
+  }, [connectWebSocket]);
   
   
   
@@ -746,22 +852,40 @@ function MergedSidebarUpload({ onFileSelect, onToggleBrainView, updateBrainData 
             : processingFiles.has(file.id)
             ? 'bg-blue-600 text-white'
             : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-          disabled={processingFiles.has(file.id) || progressMessages[file.id] === 100 || progressMessages[file.id] === -1}
-          // Add key to force re-render when states change
-          key={`summarize-${file.id}-${processingFiles.has(file.id)}-${progressMessages[file.id]}`}
+          disabled={processingFiles.has(file.id) || progressMessages[file.id] === 100 || completedSummarizations.includes(file.id) || summarizedFiles[file.id] === true || progressMessages[file.id] === -1}
+          // Add key with timestamp to force re-render on every render cycle
+          key={`summarize-${file.id}-${Date.now()}`}
         >
-          {processingFiles.has(file.id) ? (
-            <div className="flex items-center gap-1">
-              <Loader2 className="animate-spin w-3 h-3" />
-              <span>Summarizing</span>
-            </div>
-          ) : progressMessages[file.id] === 100 ? (
-            <span>Summarized</span>
-          ) : progressMessages[file.id] === -1 ? (
-            <span>Failed</span>
-          ) : (
-            <span>Summarize</span>
-          )}
+          {(() => {
+            // Force evaluation of current state with fresh values
+            // Use state directly rather than local variables to ensure we have the latest values
+            const isProcessing = processingFiles.has(file.id);
+            const progress = progressMessages[file.id] || 0;
+            const isCompleted = completedSummarizations.includes(file.id);
+            // Check if this file is directly marked as summarized in our state
+            const isDirectlySummarized = summarizedFiles[file.id] === true;
+            
+            // Log the current state for debugging
+            console.log(`RENDER: Button state for ${file.id}: processing=${isProcessing}, progress=${progress}, completed=${isCompleted}, directlySummarized=${isDirectlySummarized}, completedSummarizations=[${completedSummarizations.join(', ')}]`);
+            
+            // Force a refresh of the button state by accessing the updateCounter
+            const forceRefresh = updateCounter;
+            
+            if (isProcessing) {
+              return (
+                <div className="flex items-center gap-1">
+                  <Loader2 className="animate-spin w-3 h-3" />
+                  <span>Summarizing</span>
+                </div>
+              );
+            } else if (progress === 100 || isCompleted || completedSummarizations.includes(file.id) || summarizedFiles[file.id] === true) {
+              return <span>Summarized</span>;
+            } else if (progress === -1) {
+              return <span>Failed</span>;
+            } else {
+              return <span>Summarize</span>;
+            }
+          })()}
         </button>
         
         <button
