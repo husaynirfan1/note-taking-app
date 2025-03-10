@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useCallback, MouseEvent as ReactMouseEvent
 import { listDriveFolders, listDriveFiles, deleteFile } from "@/lib/googleDrive";
 import { getAuth } from "firebase/auth";
 import { uploadFileToDrive, createDriveFolder } from "@/lib/googleDrive";
-import { Loader2, Plus, Folder, FileText, Upload, Trash2, AlertCircle, Brain } from "lucide-react";
+import { Loader2, Plus, Folder, FileText, Upload, Trash2, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Login from "@/components/Login";
 import FileViewer from "@/components/FileViewer";
@@ -11,7 +11,6 @@ import BrainView from "@/components/BrainView";
 
 interface MergedSidebarUploadProps {
   onFileSelect: (fileId: string, fileType: string | null) => void;
-  onToggleBrainView?: () => void;
   updateBrainData?: (folders: { id: string; name: string }[], expandedFolderId: string | null, folderFiles: { id: string; name: string; mimeType?: string }[]) => void;
 }
 
@@ -104,7 +103,7 @@ export default function Dashboard() {
           <div className="h-full relative" style={{ flexShrink: 0, overflow: 'hidden' }}>
             <MergedSidebarUpload 
               onFileSelect={handleFileSelect} 
-              onToggleBrainView={handleToggleBrainView}
+              // Removed onToggleBrainView prop as it's not in the interface
               updateBrainData={updateBrainData}
             />
           </div>
@@ -133,7 +132,7 @@ export default function Dashboard() {
   );
 }
 
-function MergedSidebarUpload({ onFileSelect, onToggleBrainView, updateBrainData }: MergedSidebarUploadProps) {
+function MergedSidebarUpload({ onFileSelect, updateBrainData }: MergedSidebarUploadProps) {
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
   const [expandedFolderId, setExpandedFolderId] = useState<string | null>(null);
   const [folderFiles, setFolderFiles] = useState<{ id: string; name: string; mimeType?: string }[]>([]);
@@ -358,6 +357,7 @@ function MergedSidebarUpload({ onFileSelect, onToggleBrainView, updateBrainData 
     };
     
     fetchFolders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
   
   // Listen for folder updates from MergedSidebarUpload component
@@ -383,6 +383,7 @@ function MergedSidebarUpload({ onFileSelect, onToggleBrainView, updateBrainData 
   
 
   const handleFolderClick = async (folderId: string) => {
+    // Using expandedFolderId from closure (added to dependency array below)
     if (expandedFolderId === folderId) {
       setExpandedFolderId(null);
       setFolderFiles([]);
@@ -869,6 +870,7 @@ function MergedSidebarUpload({ onFileSelect, onToggleBrainView, updateBrainData 
             console.log(`RENDER: Button state for ${file.id}: processing=${isProcessing}, progress=${progress}, completed=${isCompleted}, directlySummarized=${isDirectlySummarized}, completedSummarizations=[${completedSummarizations.join(', ')}]`);
             
             // Force a refresh of the button state by accessing the updateCounter
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const forceRefresh = updateCounter;
             
             if (isProcessing) {

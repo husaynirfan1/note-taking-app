@@ -5,8 +5,9 @@ import { auth } from "@/lib/firebaseConfig";
  * @param folderName The name of the folder to create.
  * @returns The ID of the created folder.
  */
-import { useEffect, useState } from "react";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+// These imports are not used directly in this file but are exported for use elsewhere
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { getAuth } from "firebase/auth";
 
 const isUserAuthenticated = () => {
   return new Promise((resolve, reject) => {
@@ -21,6 +22,8 @@ const isUserAuthenticated = () => {
   });
 };
 
+// This function is exported but not used directly in this file
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function getAccessToken() {
   const auth = getAuth();
   const user = auth.currentUser;

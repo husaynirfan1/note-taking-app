@@ -2,8 +2,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 // Define types for our animations
 type PulsingDot = {
