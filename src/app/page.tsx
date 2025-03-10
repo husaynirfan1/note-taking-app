@@ -323,7 +323,8 @@ function NoteTakingAnimation() {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [activeNote]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeNote, notes.length]);
 
   return (
     <div className="flex-1 grid grid-cols-3 gap-4">

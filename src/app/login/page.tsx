@@ -46,9 +46,11 @@ export default function LoginPage() {
       } else {
         setError("Failed to retrieve access token");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login failed:", error);
-      setError(error.message || "Login failed");
+      // Type guard to safely access error.message
+      const errorMessage = error instanceof Error ? error.message : "Login failed";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -342,6 +342,7 @@ function MergedSidebarUpload({ onFileSelect, updateBrainData }: MergedSidebarUpl
         setTimeout(() => connectWebSocket(), 3000);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Fetch folders for brain visualization
@@ -357,7 +358,7 @@ function MergedSidebarUpload({ onFileSelect, updateBrainData }: MergedSidebarUpl
     };
     
     fetchFolders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [accessToken]);
   
   // Listen for folder updates from MergedSidebarUpload component

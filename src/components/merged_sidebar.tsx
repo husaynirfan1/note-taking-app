@@ -7,10 +7,9 @@ import { Loader2, Plus, Folder, FileText, Upload, Trash2, AlertCircle } from "lu
 
 interface MergedSidebarUploadProps {
   onFileSelect: (fileId: string, fileType: string | null) => void;
-  onToggleBrainView?: () => void;
 }
 
-export default function MergedSidebarUpload({ onFileSelect, onToggleBrainView }: MergedSidebarUploadProps) {
+export default function MergedSidebarUpload({ onFileSelect }: MergedSidebarUploadProps) {
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
   const [expandedFolderId, setExpandedFolderId] = useState<string | null>(null);
   const [folderFiles, setFolderFiles] = useState<{ id: string; name: string; mimeType?: string }[]>([]);
@@ -44,7 +43,6 @@ export default function MergedSidebarUpload({ onFileSelect, onToggleBrainView }:
     };
 
     fetchFolders();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, expandedFolderId]);
   
@@ -219,7 +217,7 @@ export default function MergedSidebarUpload({ onFileSelect, onToggleBrainView }:
   
   
 
-  const handleFolderClick = async (folderId: string) => {
+  const handleFolderClick = useCallback(async (folderId: string) => {
     // Using expandedFolderId in this function
     if (expandedFolderId === folderId) {
       setExpandedFolderId(null);
@@ -230,7 +228,8 @@ export default function MergedSidebarUpload({ onFileSelect, onToggleBrainView }:
       setExpandedFolderId(folderId);
       setFolderFiles(files);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken, expandedFolderId]);
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) {
@@ -566,13 +565,7 @@ export default function MergedSidebarUpload({ onFileSelect, onToggleBrainView }:
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold text-white">Folders</h2>
-            <button 
-              onClick={() => onToggleBrainView && onToggleBrainView()} 
-              className="flex items-center justify-center px-2 py-1 bg-indigo-600 rounded-md hover:bg-indigo-500 transition-all"
-              title="Brain Visualization"
-            >
-              <span className="text-white font-medium">🧠 Brain</span>
-            </button>
+            {/* Brain visualization button removed */}
           </div>
           <button onClick={handleCreateFolder} className="text-green-400 hover:text-green-300 transition-all">
             <Plus size={20} />
