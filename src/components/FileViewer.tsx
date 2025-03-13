@@ -15,19 +15,32 @@ export default function FileViewer({ fileId, accessToken, fileType }: FileViewer
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Cleanup function to revoke object URLs when component unmounts or when PDF changes
+  useEffect(() => {
+    return () => {
+      // Cleanup any created object URLs when component unmounts
+      if (pdfFile) {
+        console.log('Revoking URL:', pdfFile);
+        URL.revokeObjectURL(pdfFile);
+      }
+    };
+  }, [pdfFile]);
+
   useEffect(() => {
     // Reset states when file changes
     setFileContent(null);
     setPdfFile(null);
     setError(null);
+    setIsLoading(true);
     
     const fetchFileContent = async () => {
       console.log('FileViewer useEffect - Props:', { fileId, accessToken, fileType });
       if (!fileId || !accessToken) {
         console.log('Missing required props:', { fileId, accessToken });
+        setIsLoading(false);
         return;
       }
-      setIsLoading(true);
+      
       try {
         console.log('Processing file with type:', fileType);
         // Default to text content if fileType is null
@@ -48,6 +61,12 @@ export default function FileViewer({ fileId, accessToken, fileType }: FileViewer
           if (pdfBlob instanceof ArrayBuffer) {
             console.log('Creating Blob from ArrayBuffer...');
             const blob = new Blob([pdfBlob], { type: "application/pdf" });
+            
+            // Revoke any existing URL before creating a new one
+            if (pdfFile) {
+              URL.revokeObjectURL(pdfFile);
+            }
+            
             const url = URL.createObjectURL(blob);
             console.log('Created URL for PDF:', url);
             setPdfFile(url);
@@ -61,10 +80,10 @@ export default function FileViewer({ fileId, accessToken, fileType }: FileViewer
           if (typeof content === 'string') {
             setFileContent(content);
           } else {
-            console.error('Expected string but got:', typeof content);
+            throw new Error('Expected string but got: ' + typeof content);
           }
         } else {
-          setFileContent("Unsupported file type.");
+          setFileContent("Unsupported file type: " + fileType);
         }
       } catch (error) {
         console.error("Failed to fetch file content:", error);
@@ -73,17 +92,13 @@ export default function FileViewer({ fileId, accessToken, fileType }: FileViewer
         setPdfFile(null);
       } finally {
         setIsLoading(false);
-        console.log('File loading complete. States:', { 
-          fileContent: fileContent ? 'Has content' : 'No content', 
-          pdfFile: pdfFile ? 'Has PDF URL' : 'No PDF URL',
-          error,
-          isLoading
-        });
       }
     };
 
     fetchFileContent();
-  }, [fileId, accessToken, fileType, fileContent, pdfFile, isLoading, error]);
+    
+    // Only re-run when these props change
+  }, [fileId, accessToken, fileType]);
 
   if (!fileId) {
     return (
