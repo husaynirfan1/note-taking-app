@@ -37,3 +37,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## License
 Licensed under ANTI-CAPITALIST SOFTWARE LICENSE (v 1.4). 
+###TODO WEBSOCKECT FIX
