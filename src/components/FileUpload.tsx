@@ -54,7 +54,7 @@ export default function FileUpload() {
         throw new Error("Failed to create folder on server.");
       }
 
-      const result = await response.json();
+      await response.json(); // Process result if needed in the future
       setMessage(`Folder created and synced: ${folderName}`);
     } catch (error) {
       // Handle unknown error type
@@ -91,7 +91,7 @@ export default function FileUpload() {
       setMessage(`File uploaded to Google Drive: ${selectedFile.name}`);
 
       // Send file to FastAPI server
-      const response = await sendFileToServer(selectedFile, selectedFile.name, uid);
+      await sendFileToServer(selectedFile, selectedFile.name, uid);
       setMessage(`File uploaded to Google Drive and server: ${selectedFile.name}`);
     } catch (error) {
       // Handle unknown error type

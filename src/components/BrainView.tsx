@@ -139,10 +139,10 @@ export default function BrainView({ folders, folderFiles, expandedFolderId }: Br
       .data(nodes)
       .enter()
       .append("g")
-      .call(d3.drag()
+      .call(d3.drag<SVGGElement, Node>()
         .on("start", dragstarted)
         .on("drag", dragged)
-        .on("end", dragended) as any);
+        .on("end", dragended));
     
     // Add circles for nodes
     node.append("circle")
@@ -232,18 +232,18 @@ export default function BrainView({ folders, folderFiles, expandedFolderId }: Br
     });
     
     // Drag functions
-    function dragstarted(event: any) {
+    function dragstarted(event: d3.D3DragEvent<SVGGElement, Node, Node>) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
       event.subject.fx = event.subject.x;
       event.subject.fy = event.subject.y;
     }
     
-    function dragged(event: any) {
+    function dragged(event: d3.D3DragEvent<SVGGElement, Node, Node>) {
       event.subject.fx = event.x;
       event.subject.fy = event.y;
     }
     
-    function dragended(event: any) {
+    function dragended(event: d3.D3DragEvent<SVGGElement, Node, Node>) {
       if (!event.active) simulation.alphaTarget(0);
       event.subject.fx = null;
       event.subject.fy = null;

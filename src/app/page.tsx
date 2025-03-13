@@ -285,7 +285,7 @@ function AnimatedBackground() {
       ))}
       
       {/* Grid pattern overlay */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMDIwMjAiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djZoNnYtNmgtNnptMC0zMHY2aDZ2LTZoLTZ6TTYgNHY2aDZ2LTZINnptMCAzMHY2aDZ2LTZINnptMCAxNXY2aDZ2LTZINnptMTUgMHY2aDZ2LTZoLTZ6bTE1IDB2Nmg2di02aC02em0xNSAwdjZoNnYtNmgtNnptMC0xNXY2aDZ2LTZoLTZ6bTAtMTV2Nmg2di02aC02em0tMzAgMHY2aDZ2LTZoLTZ6bTE1LTE1djZoNnYtNmgtNnptLTE1IDB2Nmg2di02aC02em0zMCAzMHY2aDZ2LTZoLTZ6bS0xNSAwdjZoNnYtNmgtNnptLTE1IDB2Nmg2di02aC02eiIvPjwvZz48L2c+PC9zdmc+')] opacity-10 z-20" />
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMDIwMjAiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djZoNnYtNmgtNnptMC0zMHY2aDZ2LTZINnptMCAzMHY2aDZ2LTZINnptMCAxNXY2aDZ2LTZINnptMTUgMHY2aDZ2LTZoLTZ6bTE1IDB2Nmg2di02aC02em0xNSAwdjZoNnYtNmgtNnptMC0xNXY2aDZ2LTZoLTZ6bTAtMTV2Nmg2di02aC02em0tMzAgMHY2aDZ2LTZoLTZ6bTE1LTE1djZoNnYtNmgtNnptLTE1IDB2Nmg2di02aC02em0zMCAzMHY2aDZ2LTZoLTZ6bS0xNSAwdjZoNnYtNmgtNnptLTE1IDB2Nmg2di02aC02eiIvPjwvZz48L2c+PC9zdmc+')] opacity-10 z-20" />
       
       {/* Light beam effect */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-screen bg-gradient-to-b from-blue-500/10 via-purple-500/5 to-transparent opacity-30 blur-3xl" />
@@ -323,8 +323,7 @@ function NoteTakingAnimation() {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNote, notes.length]);
+  }, [activeNote, notes.length, timeoutRef]);
 
   return (
     <div className="flex-1 grid grid-cols-3 gap-4">

@@ -10,7 +10,8 @@ interface LoginProps {
 }
 
 export default function Login({ onToggleBrainView }: LoginProps = {}) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ displayName: string | null; email: string | null; photoURL: string | null; uid: string } | null>(null);
+  // Store access token for potential future use
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [avatarLoaded, setAvatarLoaded] = useState(false);
@@ -120,13 +121,15 @@ export default function Login({ onToggleBrainView }: LoginProps = {}) {
               </div>
             )}
             {user?.photoURL && !avatarError ? (
-              <img
+              <Image
                 src={`${user.photoURL}?height=96&width=96`} // Force size parameters for Google photos
                 alt="User Avatar"
                 referrerPolicy="no-referrer" // Important for Google photos
                 crossOrigin="anonymous"
                 className={`w-full h-full object-cover transition-opacity duration-300 ${avatarLoaded ? 'opacity-100' : 'opacity-0'}`}
                 style={{ opacity: isLoggingOut ? 0.5 : 1 }}
+                width={96}
+                height={96}
                 onLoad={() => {
                   console.log("Avatar loaded successfully");
                   setAvatarLoaded(true);

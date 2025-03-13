@@ -83,7 +83,7 @@ export default function FileViewer({ fileId, accessToken, fileType }: FileViewer
     };
 
     fetchFileContent();
-  }, [fileId, accessToken, fileType]);
+  }, [fileId, accessToken, fileType, fileContent, pdfFile, isLoading, error]);
 
   if (!fileId) {
     return (
