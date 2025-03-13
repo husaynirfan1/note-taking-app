@@ -228,7 +228,9 @@ function MergedSidebarUpload({ onFileSelect, updateBrainData }: MergedSidebarUpl
     }
     
     // Create a new WebSocket connection
-    const ws = new WebSocket("ws://140.245.111.121:8051/progress");
+    //const ws = new WebSocket("ws://140.245.111.121:8051/progress");
+    const ws = new WebSocket("wss://api.brainynotes.site/progress");
+
     wsRef.current = ws;
     
     // Handle connection opening
@@ -432,7 +434,7 @@ function MergedSidebarUpload({ onFileSelect, updateBrainData }: MergedSidebarUpl
         }
       }
 
-      const response = await fetch("http://140.245.111.121:8051/create-folder", {
+      const response = await fetch("https://api.brainynotes.site/create-folder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folderName: newFolderName, uid, folderId: createdFolderId }),
@@ -521,7 +523,7 @@ function MergedSidebarUpload({ onFileSelect, updateBrainData }: MergedSidebarUpl
             const user = auth.currentUser;
             if (user) {
               const uid = user.uid;
-              await fetch("http://140.245.111.121:8051/delete-file", {
+              await fetch("https://api.brainynotes.site/delete-file", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -585,7 +587,7 @@ function MergedSidebarUpload({ onFileSelect, updateBrainData }: MergedSidebarUpl
       }
       
       // Send processing request
-      const response = await fetch("http://140.245.111.121:8051/process-file", {
+      const response = await fetch("https://api.brainynotes.site/process-file", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -977,7 +979,7 @@ async function sendFileToServer(file: Blob, fileName: string, uid: string, folde
   formData.append("uid", uid);
   formData.append("folderId", folderId);
 
-  const response = await fetch("http://140.245.111.121:8051/upload", {
+  const response = await fetch("https://api.brainynotes.site/upload", {
     method: "POST",
     body: formData,
   });

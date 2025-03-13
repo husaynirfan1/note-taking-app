@@ -100,15 +100,32 @@ export const uploadFileToDrive = async (file: File, folderId?: string) => {
 
 export const listDriveFolders = async () => {
   try {
+    // First check if user is authenticated
     await isUserAuthenticated();
-
+    
+    // Get the current user
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    
+    // Get a fresh token directly from Firebase instead of localStorage
+    // This ensures we have a valid, non-expired token
+    const idToken = await user.getIdToken(true); // Force refresh the token
+    
+    // Get OAuth token from localStorage as fallback
     const accessToken = localStorage.getItem("accessToken");
-
+    
+    // Use the appropriate token (prefer OAuth token if available)
+    const token = accessToken || idToken;
+    
+    console.log("Using token for Drive API request"); // Don't log the actual token
+    
     const response = await axios.get(
       "https://www.googleapis.com/drive/v3/files",
       {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         params: {
           q: "mimeType='application/vnd.google-apps.folder' and trashed=false",
@@ -120,6 +137,12 @@ export const listDriveFolders = async () => {
     return response.data.files;
   } catch (error) {
     console.error("Error fetching folders:", error);
+    // If we get a 401 error, the token might be expired
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      console.error("Authentication error: Token may be expired or invalid");
+      // Clear the invalid token
+      localStorage.removeItem("accessToken");
+    }
     return [];
   }
 };
