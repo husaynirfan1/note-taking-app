@@ -11,8 +11,7 @@ interface LoginProps {
 
 export default function Login({ onToggleBrainView }: LoginProps = {}) {
   const [user, setUser] = useState<{ displayName: string | null; email: string | null; photoURL: string | null; uid: string } | null>(null);
-  // Store access token for potential future use
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  // Access token is stored in localStorage and cookies
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [avatarLoaded, setAvatarLoaded] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
@@ -30,7 +29,7 @@ export default function Login({ onToggleBrainView }: LoginProps = {}) {
         setUser(user);
       } else {
         setUser(null);
-        setAccessToken(null);
+        // Token cleared from localStorage and cookies
         localStorage.removeItem("accessToken");
       }
     });
@@ -62,7 +61,7 @@ export default function Login({ onToggleBrainView }: LoginProps = {}) {
         // Set cookie for middleware authentication
         document.cookie = `accessToken=${token}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
         
-        setAccessToken(token); // Update state
+        // Token is stored in localStorage and cookies
         console.log("User authenticated successfully");
         
         // Redirect to dashboard if on login page
